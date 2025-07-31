@@ -1,6 +1,13 @@
 import { generateToken } from "../../Lib/generateToken.js";
 import User from "../../Models/userModel.js";
 import bcrypt from "bcryptjs";
+import axios from "axios";
+import passport from "passport";
+
+const CLIENT_ID = '1017338499210-apshja6d9rhdjeoqrlf4ki7c14rl1iv5.apps.googleusercontent.com';
+const CLIENT_SECRET = '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';
+const REDIRECT_URI = 'http://localhost:3000/api/auth/google/callback';
+
 
 export const signUpController = async (req, res) => {
   try {
@@ -77,6 +84,7 @@ export const loginController = async (req, res) => {
       username: user.username,
       email: user.email,
     });
+    console.log(process.env.GOOGLE_CLIENT_ID);
   } catch (error) {
     console.log("Error in login controller", error.message);
     res.status(500).json({
@@ -161,3 +169,27 @@ export const delUser = async(req, res) => {
         res.status(500).json({error: "Internal server error"})
     }   
 }
+export const googleAuthController = (req, res) => {
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+  })(req, res);
+};
+export const googleAuthCallbackController = (req, res) => {
+  passport.authenticate("google", { session: false }, (error, user, info) => {
+    if (error || !user) {
+      return res.status(400).json({ error: "Google authentication failed" });
+    }
+    generateToken(user._id, res);
+    console.log("User authenticated with Google successfully", user);
+    res.redirect("http://localhost:3000");
+  })(req, res);
+};
+export const googleLogout = (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: "Logout failed" });
+    }
+    res.cookie("jwt","", { maxAge: 0 });
+    res.status(200).json({ message: "Logged out successfully" });
+  });
+};    
